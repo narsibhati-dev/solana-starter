@@ -38,7 +38,7 @@ export default function RequestAirdrop() {
   }
 
   return (
-    <div className='h-full w-full rounded-lg bg-white/10 p-4 shadow-lg'>
+    <div className='h-full w-full rounded-lg bg-white/10 p-4 shadow-lg ring ring-neutral-700'>
       <h3 className='mb-4 text-center text-lg font-bold text-purple-300'>
         Request Airdrop
       </h3>

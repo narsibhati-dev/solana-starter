@@ -1,6 +1,6 @@
 export default function SignMessage() {
     return (
-        <div className='h-full w-full rounded-lg bg-white/10 p-4 shadow-lg'>
+        <div className='h-full w-full rounded-lg bg-white/10 p-4 shadow-lg ring ring-neutral-700'>
             <h3 className='text-center text-lg font-bold text-purple-300'>
                 Sign Message
             </h3>

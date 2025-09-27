@@ -181,7 +181,7 @@ export default function CreateAndMintToken() {
     };
 
     return (
-        <div className="h-full w-full rounded-lg bg-white/10 p-3 sm:p-4 shadow-lg">
+        <div className="h-full w-full rounded-lg bg-white/10 p-3 sm:p-4 shadow-lg ring ring-neutral-700">
             <h3 className="text-center text-base sm:text-lg font-bold text-purple-300">
                 Create & Mint SPL Token
             </h3>

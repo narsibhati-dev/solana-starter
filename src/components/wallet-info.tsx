@@ -54,14 +54,14 @@ export default function WalletInfo() {
 
     if (!connected) {
         return (
-            <p className='h-full w-full shadow-lg rounded-lg bg-white/10 text-gray-200 lg:min-h-48 flex items-center justify-center'>
+            <p className='h-full w-full shadow-lg rounded-lg bg-white/10 text-gray-200 lg:min-h-48 flex items-center justify-center ring ring-neutral-700'>
                 No wallet connected
             </p>
         );
     }
 
     return (
-        <div className='flex h-full w-full flex-col items-center justify-center rounded-lg bg-white/10 p-4 shadow-lg lg:min-h-48'>
+        <div className='flex h-full w-full flex-col items-center justify-center rounded-lg bg-white/10 p-4 shadow-lg lg:min-h-48 ring ring-neutral-700'>
             <p className='flex flex-wrap items-center gap-2 truncate text-center font-mono text-xs text-gray-200 lg:text-base'>
                 <span className='font-semibold'>Wallet:</span>{' '}
                 {publicKey?.toBase58().slice(0, 10)}...
