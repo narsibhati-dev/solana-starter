@@ -15,7 +15,6 @@ export default function WalletInfo() {
         toast.success('Copied to clipboard');
     };
 
-    // keep SOL balance live via account change subscription
     useEffect(() => {
         let subscriptionId: number | null = null;
 
@@ -54,28 +53,47 @@ export default function WalletInfo() {
 
     if (!connected) {
         return (
-            <p className='h-full w-full shadow-lg rounded-lg bg-white/10 text-gray-200 lg:min-h-48 flex items-center justify-center ring ring-neutral-700'>
-                No wallet connected
-            </p>
+            <div className='h-full w-full bg-surface border border-border rounded-xl lg:min-h-48 flex flex-col items-center justify-center gap-3'>
+                <div className='w-8 h-8 rounded-full border border-border flex items-center justify-center'>
+                    <div className='w-2 h-2 rounded-full bg-border'></div>
+                </div>
+                <p className='text-xs tracking-widest uppercase text-muted'>No wallet connected</p>
+            </div>
         );
     }
 
     return (
-        <div className='flex h-full w-full flex-col items-center justify-center rounded-lg bg-white/10 p-4 shadow-lg lg:min-h-48 ring ring-neutral-700'>
-            <p className='flex flex-wrap items-center gap-2 truncate text-center font-mono text-xs text-gray-200 lg:text-base'>
-                <span className='font-semibold'>Wallet:</span>{' '}
-                {publicKey?.toBase58().slice(0, 10)}...
-                {publicKey?.toBase58().slice(-10)}
-                <button
-                    className='cursor-pointer rounded-md bg-gradient-to-r from-purple-300 to-purple-200 p-1 text-black lg:px-2 shadow-lg hover:scale-102 transition-all duration-200 ease-in-out'
-                    onClick={handleCopy}
-                >
-                    Copy
-                </button>
-            </p>
-            <p className='mt-2 truncate text-center text-lg font-bold text-purple-300'>
-                Balance: {balance !== null ? `${balance.toFixed(4)} SOL` : 'Loading...'}
-            </p>
+        <div className='h-full w-full bg-surface border border-border rounded-xl lg:min-h-48 overflow-hidden'>
+            <div className='px-5 pt-5 pb-4 flex flex-col gap-5'>
+                <div className='flex items-center justify-between'>
+                    <div className='flex items-center gap-2'>
+                        <div className='w-2 h-2 rounded-full bg-success'></div>
+                        <span className='text-[10px] tracking-widest uppercase text-muted font-bold'>Connected</span>
+                    </div>
+                </div>
+
+                <div className='flex flex-col gap-1'>
+                    <span className='text-[10px] tracking-widest uppercase text-muted mb-1'>Balance</span>
+                    <div className='flex items-baseline gap-2'>
+                        <span className='font-display text-6xl text-foreground'>
+                            {balance !== null ? balance.toFixed(4) : '----'}
+                        </span>
+                        <span className='text-sm text-muted font-bold uppercase tracking-widest'>SOL</span>
+                    </div>
+                </div>
+
+                <div className='flex items-center justify-between gap-3 bg-surface-2 rounded-lg px-3 py-2.5'>
+                    <span className='font-mono text-xs text-muted truncate'>
+                        {publicKey?.toBase58().slice(0, 10)}···{publicKey?.toBase58().slice(-10)}
+                    </span>
+                    <button
+                        onClick={handleCopy}
+                        className='text-[10px] font-bold tracking-widest uppercase text-muted hover:text-accent transition-colors duration-150 cursor-pointer flex-shrink-0'
+                    >
+                        COPY
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }

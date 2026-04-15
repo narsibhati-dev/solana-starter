@@ -9,7 +9,6 @@ export default function RequestAirdrop() {
   const { publicKey } = useWallet();
   const { connection } = useConnection();
   const [loading, setLoading] = useState(false);
-
   const [airdropAttempted, setAirdropAttempted] = useState(false);
   const [amount, setAmount] = useState(1);
 
@@ -18,12 +17,10 @@ export default function RequestAirdrop() {
       toast.error('Please connect your wallet');
       return;
     }
-
     if (airdropAttempted) {
       toast.error('Airdrop already attempted today. Try again tomorrow!');
       return;
     }
-
     setLoading(true);
     setAirdropAttempted(true);
     try {
@@ -38,32 +35,34 @@ export default function RequestAirdrop() {
   }
 
   return (
-    <div className='h-full w-full rounded-lg bg-white/10 p-4 shadow-lg ring ring-neutral-700'>
-      <h3 className='mb-4 text-center text-lg font-bold text-purple-300'>
-        Request Airdrop
-      </h3>
+    <div className='h-full w-full bg-surface border border-border rounded-xl overflow-hidden'>
+      <div className='px-5 pt-4 pb-1'>
+        <p className='text-[10px] tracking-widest uppercase text-muted font-bold'>Request Airdrop</p>
+      </div>
 
-      <form className='flex flex-col gap-4'>
+      <div className='px-5 py-4 flex flex-col gap-3'>
         <div className='flex flex-col gap-2'>
-          <label htmlFor='amount'>Amount in SOL</label>
+          <label htmlFor='airdrop-amount' className='text-xs text-muted'>
+            Amount (SOL)
+          </label>
           <input
             type='number'
-            id='amount'
+            id='airdrop-amount'
             value={amount}
             onChange={e => setAmount(Number(e.target.value))}
-            placeholder='Enter amount in SOL'
-            className='w-full rounded-md bg-white/5 p-2 text-white outline-none'
+            placeholder='1'
+            className='w-full bg-surface-2 border border-border rounded-lg px-4 py-3 text-sm text-foreground outline-none focus:border-accent/60 transition-colors duration-150'
             required
           />
         </div>
         <button
           onClick={airdropSol}
           disabled={!publicKey || loading}
-          className='w-full cursor-pointer rounded-md bg-gradient-to-r from-purple-300 to-purple-200 px-4 py-2 font-bold text-black shadow-lg transition duration-200 ease-in-out hover:scale-101 disabled:cursor-not-allowed disabled:opacity-50'
+          className='w-full bg-accent rounded-lg px-4 py-3 text-xs font-bold tracking-wider uppercase text-white cursor-pointer hover:bg-[#bc4f1f] transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed'
         >
           {loading ? 'Processing...' : 'Request Airdrop'}
         </button>
-      </form>
+      </div>
     </div>
   );
 }

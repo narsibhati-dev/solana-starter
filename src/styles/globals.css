@@ -1,13 +1,77 @@
 @import 'tailwindcss';
 
 :root {
-  --background: #0a0a0a;
-  --foreground: #ededed;
+  --background: #0e0e0e;
+  --surface: #181818;
+  --surface-2: #222222;
+  --border: #2e2e2e;
+  --foreground: #eeebe4;
+  --muted: #6e6a64;
+  --dim: #3a3632;
+  --accent: #d95f2b;
+  --success: #4e9e6e;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-muted: var(--muted);
+  --color-dim: var(--dim);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --font-sans: var(--font-ibm-plex-mono);
+  --font-mono: var(--font-ibm-plex-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-ibm-plex-mono), 'IBM Plex Mono', monospace;
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+.font-display {
+  font-family: var(--font-bebas-neue), 'Bebas Neue', sans-serif;
+  letter-spacing: 0.04em;
+}
+
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+::placeholder {
+  color: var(--dim);
+  opacity: 1;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* Wallet adapter modal collapse button */
+.wallet-adapter-modal-collapse-btn {
+  color: var(--muted) !important;
 }

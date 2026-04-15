@@ -1,27 +1,166 @@
-/* Wallet Adapter Button Styling */
-.wallet-adapter-button {
-  background: linear-gradient(135deg, #d1b4f5 0%, #b99fed 100%) !important;
+/* ─── Trigger button (header "Connect Wallet") ─── */
+.wallet-adapter-button-trigger {
+  background: var(--accent, #d95f2b) !important;
   border: none !important;
   outline: none !important;
-  min-width: 140px !important;
-  color: #000 !important;
+  min-width: 130px !important;
+  color: #fff !important;
   font-weight: 600 !important;
-  padding: 8px 14px !important;
+  padding: 9px 18px !important;
   border-radius: 8px !important;
-  transition: all 0.2s ease !important;
+  transition: background 0.15s ease, opacity 0.15s ease !important;
   cursor: pointer !important;
   justify-content: center !important;
-  font-size: 16px !important;
-  margin-bottom: 2px !important;
-  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.15) !important;
+  font-size: 12px !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  font-family: var(--font-ibm-plex-mono), 'IBM Plex Mono', monospace !important;
+  box-shadow: none !important;
+}
+
+.wallet-adapter-button-trigger:not([disabled]):hover {
+  background: #bc4f1f !important;
+  box-shadow: none !important;
+}
+
+.wallet-adapter-button-trigger[disabled] {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+}
+
+.wallet-adapter-button-trigger .wallet-adapter-button-start-icon {
+  display: none !important;
+}
+
+/* ─── Modal overlay ─── */
+.wallet-adapter-modal {
+  background: rgba(0, 0, 0, 0.7) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+/* ─── Modal container ─── */
+.wallet-adapter-modal-wrapper {
+  background: #1a1a1a !important;
+  border: 1px solid #2e2e2e !important;
+  border-radius: 16px !important;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6) !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+/* ─── Modal title ─── */
+.wallet-adapter-modal-title {
+  color: #6e6a64 !important;
+  font-family: var(--font-ibm-plex-mono), 'IBM Plex Mono', monospace !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase !important;
+  padding: 24px 24px 20px !important;
+  border-bottom: 1px solid #2e2e2e !important;
+  margin: 0 !important;
+}
+
+/* ─── Modal close button ─── */
+.wallet-adapter-modal-button-close {
+  background: #222222 !important;
+  border: 1px solid #2e2e2e !important;
+  border-radius: 50% !important;
+  box-shadow: none !important;
+  top: 16px !important;
+  right: 16px !important;
+  padding: 6px !important;
+  transition: background 0.15s ease, border-color 0.15s ease !important;
+}
+
+.wallet-adapter-modal-button-close:hover {
+  background: #2e2e2e !important;
+  border-color: #6e6a64 !important;
+}
+
+.wallet-adapter-modal-button-close svg {
+  fill: #6e6a64 !important;
+}
+
+/* ─── Wallet list ─── */
+.wallet-adapter-modal-list {
+  margin: 0 !important;
+  padding: 8px !important;
+}
+
+.wallet-adapter-modal-list li {
+  padding: 0 !important;
+  border-bottom: none !important;
+  border-radius: 10px !important;
+  overflow: hidden !important;
+}
+
+/* ─── Wallet list item buttons ─── */
+.wallet-adapter-modal-list .wallet-adapter-button {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+  color: #eeebe4 !important;
+  font-family: var(--font-ibm-plex-mono), 'IBM Plex Mono', monospace !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  padding: 14px 16px !important;
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  transition: background 0.12s ease !important;
+  min-width: unset !important;
+}
+
+.wallet-adapter-modal-list .wallet-adapter-button:hover {
+  background: #222222 !important;
+}
+
+.wallet-adapter-modal-list .wallet-adapter-button .wallet-adapter-button-start-icon {
+  display: none !important;
+}
+
+/* ─── "Detected" badge ─── */
+.wallet-adapter-modal-list .wallet-adapter-button p {
+  color: #4e9e6e !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+  margin: 0 !important;
+  background: rgba(78, 158, 110, 0.1) !important;
+  padding: 3px 8px !important;
+  border-radius: 4px !important;
+}
+
+/* ─── "More options" link ─── */
+.wallet-adapter-modal-list-more {
+  color: #6e6a64 !important;
+  font-family: var(--font-ibm-plex-mono), 'IBM Plex Mono', monospace !important;
+  font-size: 10px !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+  border-top: 1px solid #2e2e2e !important;
+  padding: 14px 24px !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  width: 100% !important;
+  display: block !important;
+  transition: color 0.15s ease !important;
+}
+
+.wallet-adapter-modal-list-more:hover {
+  color: #eeebe4 !important;
 }
 
 @media (max-width: 768px) {
-  .wallet-adapter-button {
+  .wallet-adapter-button-trigger {
     min-width: 100px !important;
-    font-size: 12px !important;
-    padding: 6px 12px !important;
-    border-radius: 4px !important;
-    margin-top: 2px !important;
+    font-size: 11px !important;
+    padding: 8px 14px !important;
   }
 }

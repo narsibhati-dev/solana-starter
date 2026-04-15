@@ -24,7 +24,6 @@ export default function CreateAndMintToken() {
     const [loading, setLoading] = useState(false);
     const [showAllModal, setShowAllModal] = useState(false);
 
-    // rehydrate from localStorage when wallet connects
     useEffect(() => {
         const rehydrate = async () => {
             if (typeof window === 'undefined') return;
@@ -36,7 +35,6 @@ export default function CreateAndMintToken() {
             }
 
             try {
-                // Prefer multi-mint storage
                 const listKey = `mints:${publicKey.toBase58()}`;
                 const listRaw = window.localStorage.getItem(listKey);
                 if (listRaw) {
@@ -51,12 +49,10 @@ export default function CreateAndMintToken() {
                     const mintPubkey = new PublicKey(active);
                     const ata = await getAssociatedTokenAddress(mintPubkey, publicKey);
                     const accountInfo = await getAccount(connection, ata);
-                    const balance = Number(accountInfo.amount) / 1_000_000; // decimals 6
-                    setTokenBalance(balance);
+                    setTokenBalance(Number(accountInfo.amount) / 1_000_000);
                     return;
                 }
 
-                // Fallback (and migrate) from legacy single-mint key
                 const legacyKey = `mint:${publicKey.toBase58()}`;
                 const legacyRaw = window.localStorage.getItem(legacyKey);
                 if (!legacyRaw) return;
@@ -67,17 +63,13 @@ export default function CreateAndMintToken() {
                 const mintPubkey = new PublicKey(legacy.mint);
                 const ata = await getAssociatedTokenAddress(mintPubkey, publicKey);
                 const accountInfo = await getAccount(connection, ata);
-                const balance = Number(accountInfo.amount) / 1_000_000; // decimals 6
-                setTokenBalance(balance);
-                // migrate
+                setTokenBalance(Number(accountInfo.amount) / 1_000_000);
                 try {
                     const storageKey = `mints:${publicKey.toBase58()}`;
                     window.localStorage.setItem(storageKey, JSON.stringify({ mints: [legacy.mint], activeMint: legacy.mint }));
                     window.localStorage.removeItem(legacyKey);
                 } catch { }
-            } catch {
-                // ignore rehydrate errors
-            }
+            } catch { }
         };
 
         rehydrate();
@@ -92,60 +84,22 @@ export default function CreateAndMintToken() {
         try {
             setLoading(true);
 
-            // Generate a new keypair for the mint account (will sign creation)
             const mintKeypair = Keypair.generate();
-
-            // Compute rent-exempt lamports for the mint account
             const lamportsForMint = await connection.getMinimumBalanceForRentExemption(MINT_SIZE);
-
-            // Derive the associated token account (ATA) for the connected wallet
             const ata = await getAssociatedTokenAddress(mintKeypair.publicKey, publicKey);
 
-            // Build transaction with: create mint account, init mint, create ATA, mint to ATA
             const tx = new Transaction();
+            tx.add(SystemProgram.createAccount({
+                fromPubkey: publicKey,
+                newAccountPubkey: mintKeypair.publicKey,
+                space: MINT_SIZE,
+                lamports: lamportsForMint,
+                programId: TOKEN_PROGRAM_ID,
+            }));
+            tx.add(createInitializeMintInstruction(mintKeypair.publicKey, 6, publicKey, null));
+            tx.add(createAssociatedTokenAccountInstruction(publicKey, ata, publicKey, mintKeypair.publicKey));
+            tx.add(createMintToInstruction(mintKeypair.publicKey, ata, publicKey, 10_000_000));
 
-            // 1) Create the mint account (payer: connected wallet)
-            tx.add(
-                SystemProgram.createAccount({
-                    fromPubkey: publicKey,
-                    newAccountPubkey: mintKeypair.publicKey,
-                    space: MINT_SIZE,
-                    lamports: lamportsForMint,
-                    programId: TOKEN_PROGRAM_ID,
-                })
-            );
-
-            // 2) Initialize the mint (decimals=6, mint authority = connected wallet)
-            tx.add(
-                createInitializeMintInstruction(
-                    mintKeypair.publicKey,
-                    6,
-                    publicKey,
-                    null
-                )
-            );
-
-            // 3) Create the ATA for the connected wallet
-            tx.add(
-                createAssociatedTokenAccountInstruction(
-                    publicKey, // payer
-                    ata,       // ATA address
-                    publicKey, // owner
-                    mintKeypair.publicKey
-                )
-            );
-
-            // 4) Mint 10 tokens (10_000_000 units for 6 decimals) to ATA
-            tx.add(
-                createMintToInstruction(
-                    mintKeypair.publicKey,
-                    ata,
-                    publicKey, // mint authority
-                    10_000_000
-                )
-            );
-
-            // Send and confirm
             const signature = await sendTransaction(tx, connection, { signers: [mintKeypair] });
             const latest = await connection.getLatestBlockhash();
             await connection.confirmTransaction({ signature, ...latest });
@@ -153,25 +107,20 @@ export default function CreateAndMintToken() {
             const newMint = mintKeypair.publicKey.toBase58();
             setMintAddress(newMint);
 
-            // Fetch token balance from the ATA
             const accountInfo = await getAccount(connection, ata);
-            const balance = Number(accountInfo.amount) / 1_000_000;
-            setTokenBalance(balance);
+            setTokenBalance(Number(accountInfo.amount) / 1_000_000);
 
-            // persist mint list with active
             try {
                 if (typeof window !== 'undefined' && publicKey) {
                     const storageKey = `mints:${publicKey.toBase58()}`;
                     const existingRaw = window.localStorage.getItem(storageKey);
                     const existing: { mints: string[]; activeMint?: string } | null = existingRaw ? JSON.parse(existingRaw) : null;
-                    const existingList = existing?.mints ?? [];
-                    const updatedList = Array.from(new Set([newMint, ...existingList]));
+                    const updatedList = Array.from(new Set([newMint, ...(existing?.mints ?? [])]));
                     setMintList(updatedList);
                     window.localStorage.setItem(storageKey, JSON.stringify({ mints: updatedList, activeMint: newMint }));
                 }
-            } catch {
-                // ignore storage errors
-            }
+            } catch { }
+
             toast.success('Token minted successfully');
         } catch {
             toast.error('Failed to create and mint token');
@@ -181,147 +130,153 @@ export default function CreateAndMintToken() {
     };
 
     return (
-        <div className="h-full w-full rounded-lg bg-white/10 p-3 sm:p-4 shadow-lg ring ring-neutral-700">
-            <h3 className="text-center text-base sm:text-lg font-bold text-purple-300">
-                Create & Mint SPL Token
-            </h3>
+        <div className='h-full w-full bg-surface border border-border rounded-xl overflow-hidden'>
+            <div className='px-5 pt-4 pb-1'>
+                <p className='text-[10px] tracking-widest uppercase text-muted font-bold'>Create & Mint SPL Token</p>
+            </div>
 
-            <button
-                onClick={handleCreateMint}
-                disabled={!publicKey || loading}
-                className="mt-4 w-full rounded-md bg-gradient-to-r from-purple-300 to-purple-200 px-3 sm:px-4 py-2 font-bold text-black shadow-lg transition duration-200 cursor-pointer hover:scale-101 disabled:cursor-not-allowed disabled:opacity-50 text-sm sm:text-base"
-            >
-                {loading ? 'Minting...' : 'Create & Mint'}
-            </button>
+            <div className='px-5 py-4 flex flex-col gap-4'>
+                <button
+                    onClick={handleCreateMint}
+                    disabled={!publicKey || loading}
+                    className='w-full bg-accent rounded-lg px-4 py-3 text-xs font-bold tracking-wider uppercase text-white cursor-pointer hover:bg-[#bc4f1f] transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed'
+                >
+                    {loading ? 'Minting...' : 'Create & Mint'}
+                </button>
 
-            {mintAddress && (
-                <div className="mt-3 flex flex-col gap-4 sm:gap-6 bg-white/4 p-3 sm:p-4 rounded-lg">
-                    <div className="break-all">
-                        <p className="text-xs sm:text-sm text-purple-300">
-                            <span className="font-semibold">Token Mint Address</span>
-                        </p>
-                        <p className="text-xs sm:text-sm text-purple-200 font-mono mt-1">
-                            {mintAddress}
-                        </p>
-                    </div>
-
-                    {/* Button group - responsive layout */}
-                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
-                        <div className="flex flex-wrap gap-2">
-                            <button
-                                onClick={() => {
-                                    if (!mintAddress) return;
-                                    navigator.clipboard.writeText(mintAddress);
-                                    toast.success('Mint address copied');
-                                }}
-                                className="cursor-pointer rounded-md bg-gradient-to-r from-purple-300 to-purple-200 px-2 sm:px-3 py-1 text-xs sm:text-sm font-semibold text-black shadow-lg transition duration-200 hover:scale-102 flex-shrink-0"
-                            >
-                                Copy
-                            </button>
-                            <a
-                                href={`https://explorer.solana.com/address/${mintAddress}?cluster=devnet`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="rounded-md bg-white/5 px-2 sm:px-3 py-1 text-xs sm:text-sm font-semibold text-purple-200 underline decoration-purple-300/60 underline-offset-2 hover:decoration-purple-200 flex-shrink-0"
-                            >
-                                <span className="hidden sm:inline">View on Explorer</span>
-                                <span className="sm:hidden">Explorer</span>
-                            </a>
-                            {mintList.length > 1 && (
-                                <button
-                                    onClick={() => setShowAllModal(true)}
-                                    className="cursor-pointer rounded-md bg-white/5 px-2 sm:px-3 py-1 text-xs sm:text-sm font-semibold text-purple-200 hover:bg-white/10 flex-shrink-0"
-                                >
-                                    <span className="hidden sm:inline">Show all ({mintList.length})</span>
-                                    <span className="sm:hidden">All ({mintList.length})</span>
-                                </button>
+                {mintAddress && (
+                    <div className='bg-surface-2 border border-border rounded-xl overflow-hidden'>
+                        <div className='px-4 py-3 flex items-center justify-between border-b border-border'>
+                            <div className='flex items-center gap-2'>
+                                <div className='w-1.5 h-1.5 rounded-full bg-success'></div>
+                                <span className='text-[10px] tracking-widest uppercase text-muted font-bold'>Active Token</span>
+                            </div>
+                            {tokenBalance !== null && (
+                                <span className='text-xs font-bold text-success'>
+                                    {tokenBalance} <span className='text-muted font-normal'>tokens</span>
+                                </span>
                             )}
                         </div>
-                        {tokenBalance !== null && (
-                            <div className="flex-shrink-0">
-                                <p className="text-xs sm:text-sm font-semibold bg-white/5 rounded-md px-2 sm:px-3 py-1 text-green-300 inline-block">
-                                    Balance: {tokenBalance} tokens
-                                </p>
+
+                        <div className='px-4 py-3 flex flex-col gap-3'>
+                            <p className='font-mono text-xs text-muted break-all leading-relaxed'>{mintAddress}</p>
+
+                            <div className='flex flex-wrap gap-2'>
+                                <button
+                                    onClick={() => {
+                                        if (!mintAddress) return;
+                                        navigator.clipboard.writeText(mintAddress);
+                                        toast.success('Mint address copied');
+                                    }}
+                                    className='text-xs font-semibold px-3 py-1.5 rounded-lg bg-surface border border-border text-muted hover:text-foreground hover:border-muted transition-colors duration-150 cursor-pointer'
+                                >
+                                    Copy
+                                </button>
+                                <a
+                                    href={`https://explorer.solana.com/address/${mintAddress}?cluster=devnet`}
+                                    target='_blank'
+                                    rel='noreferrer'
+                                    className='text-xs font-semibold px-3 py-1.5 rounded-lg bg-surface border border-border text-muted hover:text-foreground hover:border-muted transition-colors duration-150'
+                                >
+                                    Explorer ↗
+                                </a>
+                                {mintList.length > 1 && (
+                                    <button
+                                        onClick={() => setShowAllModal(true)}
+                                        className='text-xs font-semibold px-3 py-1.5 rounded-lg bg-surface border border-border text-muted hover:text-foreground hover:border-muted transition-colors duration-150 cursor-pointer'
+                                    >
+                                        All ({mintList.length})
+                                    </button>
+                                )}
                             </div>
-                        )}
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
+            </div>
 
             {showAllModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-                    <div className="w-full max-w-4xl rounded-lg bg-zinc-900 p-3 sm:p-4 shadow-xl max-h-[90vh] flex flex-col">
-                        <div className="mb-2 flex items-center justify-between flex-shrink-0">
-                            <h4 className="text-sm sm:text-base font-semibold text-purple-200">Your Mints</h4>
+                <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4' style={{ backdropFilter: 'blur(4px)' }}>
+                    <div className='w-full max-w-lg bg-surface border border-border rounded-2xl max-h-[80vh] flex flex-col overflow-hidden'>
+                        <div className='px-5 py-4 flex items-center justify-between border-b border-border flex-shrink-0'>
+                            <div>
+                                <p className='text-[10px] tracking-widest uppercase text-muted font-bold'>Mint History</p>
+                                <p className='text-xs text-muted mt-0.5'>{mintList.length} token{mintList.length !== 1 ? 's' : ''}</p>
+                            </div>
                             <button
                                 onClick={() => setShowAllModal(false)}
-                                className="rounded-md bg-white/5 px-2 py-1 text-xs text-purple-200 hover:bg-white/10"
+                                className='w-8 h-8 rounded-full bg-surface-2 border border-border flex items-center justify-center text-muted hover:text-foreground hover:border-muted transition-colors duration-150 cursor-pointer text-sm'
                             >
-                                Close
+                                ✕
                             </button>
                         </div>
+
                         {mintList.length === 0 ? (
-                            <p className="text-sm text-purple-200/70">No mints found.</p>
+                            <div className='flex-1 flex items-center justify-center py-8'>
+                                <p className='text-sm text-muted'>No mints found</p>
+                            </div>
                         ) : (
-                            <div className="flex flex-col gap-2 overflow-auto flex-1 min-h-0">
-                                {mintList.map(m => {
+                            <div className='flex flex-col overflow-auto flex-1 min-h-0 p-3 gap-2'>
+                                {mintList.map((m, idx) => {
                                     const isActive = m === mintAddress;
                                     return (
-                                        <div key={m} className={`flex flex-col sm:flex-row sm:items-center justify-between rounded-md p-2 sm:p-3 gap-2 sm:gap-0 ${isActive ? 'bg-white/10' : 'bg-white/5'}`}>
-                                            <div className="flex items-center gap-2 min-w-0 flex-1">
-                                                <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-purple-200 flex-shrink-0">{isActive ? 'Active' : 'Mint'}</span>
-                                                <span className="font-mono text-xs text-purple-200 break-all sm:break-normal">
-                                                    <span className="hidden sm:inline">{m.slice(0, 8)}...{m.slice(-8)}</span>
-                                                    <span className="sm:hidden">{m.slice(0, 6)}...{m.slice(-6)}</span>
-                                                </span>
-                                            </div>
-                                            <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-                                                <button
-                                                    onClick={() => {
-                                                        navigator.clipboard.writeText(m);
-                                                        toast.success('Copied mint');
-                                                    }}
-                                                    className="rounded-md bg-gradient-to-r from-purple-300 to-purple-200 px-2 py-1 text-xs font-semibold text-black hover:scale-102 flex-shrink-0"
-                                                >
-                                                    Copy
-                                                </button>
-                                                <a
-                                                    href={`https://explorer.solana.com/address/${m}?cluster=devnet`}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="rounded-md bg-white/5 px-2 py-1 text-xs font-semibold text-purple-200 underline underline-offset-2 hover:bg-white/10 flex-shrink-0"
-                                                >
-                                                    Explorer
-                                                </a>
-                                                {!isActive && (
+                                        <div
+                                            key={m}
+                                            className={`rounded-xl p-3 border transition-colors duration-150 ${isActive ? 'bg-surface-2 border-accent/30' : 'bg-surface-2 border-border'}`}
+                                        >
+                                            <div className='flex items-center justify-between mb-2'>
+                                                <div className='flex items-center gap-2'>
+                                                    {isActive
+                                                        ? <span className='text-[9px] font-bold tracking-widest uppercase text-accent bg-accent/10 border border-accent/30 px-2 py-0.5 rounded-full'>Active</span>
+                                                        : <span className='text-[9px] font-bold tracking-widest uppercase text-muted bg-surface border border-border px-2 py-0.5 rounded-full'>#{idx + 1}</span>
+                                                    }
+                                                </div>
+                                                <div className='flex items-center gap-1.5'>
                                                     <button
-                                                        onClick={async () => {
-                                                            setMintAddress(m);
-                                                            try {
-                                                                if (typeof window !== 'undefined' && publicKey) {
-                                                                    const storageKey = `mints:${publicKey.toBase58()}`;
-                                                                    const existingRaw = window.localStorage.getItem(storageKey);
-                                                                    const existing: { mints: string[] } | null = existingRaw ? JSON.parse(existingRaw) : null;
-                                                                    const mints = existing?.mints ?? mintList;
-                                                                    window.localStorage.setItem(storageKey, JSON.stringify({ mints, activeMint: m }));
-                                                                }
-                                                            } catch { }
-                                                            try {
-                                                                const ata = await getAssociatedTokenAddress(new PublicKey(m), publicKey!);
-                                                                const accountInfo = await getAccount(connection, ata);
-                                                                const bal = Number(accountInfo.amount) / 1_000_000;
-                                                                setTokenBalance(bal);
-                                                            } catch {
-                                                                setTokenBalance(0);
-                                                            }
-                                                            setShowAllModal(false);
-                                                        }}
-                                                        className="rounded-md bg-white/10 px-2 py-1 text-xs font-semibold text-purple-200 hover:bg-white/20 flex-shrink-0"
+                                                        onClick={() => { navigator.clipboard.writeText(m); toast.success('Copied'); }}
+                                                        className='text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-surface border border-border text-muted hover:text-foreground hover:border-muted transition-colors duration-150 cursor-pointer'
                                                     >
-                                                        Set Active
+                                                        Copy
                                                     </button>
-                                                )}
+                                                    <a
+                                                        href={`https://explorer.solana.com/address/${m}?cluster=devnet`}
+                                                        target='_blank'
+                                                        rel='noreferrer'
+                                                        className='text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-surface border border-border text-muted hover:text-foreground hover:border-muted transition-colors duration-150'
+                                                    >
+                                                        ↗
+                                                    </a>
+                                                    {!isActive && (
+                                                        <button
+                                                            onClick={async () => {
+                                                                setMintAddress(m);
+                                                                try {
+                                                                    if (typeof window !== 'undefined' && publicKey) {
+                                                                        const storageKey = `mints:${publicKey.toBase58()}`;
+                                                                        const existingRaw = window.localStorage.getItem(storageKey);
+                                                                        const existing: { mints: string[] } | null = existingRaw ? JSON.parse(existingRaw) : null;
+                                                                        const mints = existing?.mints ?? mintList;
+                                                                        window.localStorage.setItem(storageKey, JSON.stringify({ mints, activeMint: m }));
+                                                                    }
+                                                                } catch { }
+                                                                try {
+                                                                    const ata = await getAssociatedTokenAddress(new PublicKey(m), publicKey!);
+                                                                    const accountInfo = await getAccount(connection, ata);
+                                                                    setTokenBalance(Number(accountInfo.amount) / 1_000_000);
+                                                                } catch {
+                                                                    setTokenBalance(0);
+                                                                }
+                                                                setShowAllModal(false);
+                                                            }}
+                                                            className='text-[10px] font-bold px-2.5 py-1 rounded-lg bg-accent text-white hover:bg-[#bc4f1f] transition-colors duration-150 cursor-pointer'
+                                                        >
+                                                            Set Active
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
+                                            <p className='font-mono text-[11px] text-muted'>
+                                                {m.slice(0, 8)}...{m.slice(-8)}
+                                            </p>
                                         </div>
                                     );
                                 })}
