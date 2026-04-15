@@ -20,6 +20,11 @@ const bebasNeue = Bebas_Neue({
 export const metadata: Metadata = {
   title: 'Solana Devnet',
   description: 'Solana Starter — Devnet',
+  icons: {
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
+  },
 };
 
 export default function RootLayout({
