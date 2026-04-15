@@ -10,7 +10,7 @@
     "format": "prettier --write ."
   },
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=24.0.0"
   },
   "dependencies": {
     "@solana/spl-token": "^0.4.14",
